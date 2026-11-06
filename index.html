@@ -224,7 +224,6 @@ figcaption b{color:var(--ink);font-weight:600}
   <dl class="gloss">
     <div><dt>Progresiva</dt><dd>Distancia a lo largo de la traza. «4+250» son 4 km y 250 m.</dd></div>
     <div><dt>Densidad</dt><dd>Ejemplares por hectárea (100 × 100 m).</dd></div>
-    <div><dt>Disposición espacial</dt><dd>Si las plantas aparecen agrupadas, al azar o espaciadas con regularidad.</dd></div>
   </dl>
 </section>
 
@@ -285,18 +284,10 @@ figcaption b{color:var(--ink);font-weight:600}
     </ul>
   </div>
   <div class="dash">
-    <div class="panel">
+    <div class="panel wide">
       <div class="card-h"><h3>Abundancia por especie</h3><p>Individuos identificados y proporción sobre el total</p></div>
       <div class="stack" id="stack" aria-hidden="true"></div>
       <div class="hbar" id="abund"></div>
-    </div>
-    <div class="panel hist">
-      <div class="card-h"><h3>Riqueza específica por parcela</h3><p>Cantidad de parcelas según el número de especies presentes</p></div>
-      <div id="hist"></div>
-    </div>
-    <div class="panel wide">
-      <div class="card-h"><h3>Disposición espacial por especie</h3><p>Índice de Clark-Evans: compara la distancia real entre vecinos con la esperada si las plantas estuvieran al azar.</p></div>
-      <div class="cestrip" id="ce"></div>
     </div>
   </div>
 </section>
@@ -518,7 +509,7 @@ function matrix(){if(!document.getElementById("matrix"))return;
   el.innerHTML=h;
   document.getElementById('mleg').innerHTML=`<span>Atracción</span><span class="ramp" style="background:linear-gradient(90deg,${A},${G},${Rj})"></span><span>Rechazo</span><span style="margin-left:10px">Escala logarítmica centrada en 1</span>`;
 }
-function drawStats(){hist();ce();matrix()}
+function drawStats(){}
 drawStats();
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',drawStats);
 new MutationObserver(drawStats).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
