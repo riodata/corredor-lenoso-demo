@@ -52,6 +52,7 @@ canvas{display:block;width:100%}
 .nav .pk{font-family:var(--f-data);font-size:.95rem;font-variant-numeric:tabular-nums}
 .btn{font:inherit;font-size:.85rem;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:5px 11px;cursor:pointer}
 .btn:hover{border-color:var(--accent)}
+.btn[aria-pressed="true"]{background:var(--accent);color:var(--bg);border-color:var(--accent)}
 #det{cursor:grab;touch-action:none}
 #det.drag{cursor:grabbing}
 .hint{font-size:.78rem;color:var(--muted);margin-top:8px}
@@ -244,7 +245,7 @@ figcaption b{color:var(--ink);font-weight:600}
 
 <section id="detalle">
   <div class="sec-head">
-    <div><h2>Detalle por individuo</h2><p>Copas a escala real (1:1). Arrastre para recorrer el corredor.</p></div>
+    <div><h2>Detalle por individuo</h2><p>Copas a escala real sobre la ortofoto. Arrastre para recorrer el corredor.</p></div>
   </div>
   <div class="detail-grid">
     <div class="panel">
@@ -253,6 +254,7 @@ figcaption b{color:var(--ink);font-weight:600}
         <span class="pk" id="pk"></span>
         <button class="btn" id="next" aria-label="Tramo siguiente">›</button>
         <span style="flex:1"></span>
+        <button class="btn" id="orto" aria-pressed="true">Ortofoto</button>
         <div class="seg" role="group" aria-label="Ancho de ventana">
           <button data-z="150" aria-pressed="false">150 m</button>
           <button data-z="300" aria-pressed="true">300 m</button>
@@ -342,7 +344,9 @@ segs.forEach(g=>{const len=Math.min(SEG,L-g.k*SEG);g.dens=g.n/(len*ANCHO/1e4);g.
  let b=-1,bn=0;g.cnt.forEach((v,k)=>{if(v>bn){bn=v;b=k}});g.dom=b;g.domp=g.n?bn/g.n:0});
 const maxD=Math.max(...segs.map(g=>g.dens)), maxR=Math.max(...segs.map(g=>g.riq));
 
-let mode='dens', win=300, x0=4000;
+let mode='dens', win=300, x0=4000, ortoOn=true;
+const OT=150, OHALF=40, ocache=new Map();
+function tile(k){if(ocache.has(k))return ocache.get(k);const im=new Image();im.onload=()=>drawDet();im.onerror=()=>{};im.src=`orto/o${String(k).padStart(3,'0')}.webp`;ocache.set(k,im);return im}
 const ramp=t=>{ // verde claro -> verde profundo
   const a=[226,236,214],b=[24,84,60];return `rgb(${a.map((v,i)=>Math.round(v+(b[i]-v)*t)).join(',')})`};
 const rampR=t=>{const a=[234,229,242],b=[88,42,120];return `rgb(${a.map((v,i)=>Math.round(v+(b[i]-v)*t)).join(',')})`};
@@ -400,6 +404,8 @@ function drawDet(){
   const [c]=sizeCanvas(det,H);const pxm=Math.min(k,(H-28)/(2*half));
   const cy=(H-28)/2;const sx=m=>(m-x0)*k, sy=d=>cy-d*pxm;detGeom={sx,sy,k,pxm};
   c.fillStyle=css('--ground');c.fillRect(0,0,W,H-28);
+  if(ortoOn){for(let k=Math.floor(x0/OT);k*OT<x0+win;k++){const im=tile(k);if(im.complete&&im.naturalWidth){const xa=sx(k*OT),xb=sx((k+1)*OT);c.drawImage(im,xa,sy(OHALF),xb-xa+.5,sy(-OHALF)-sy(OHALF))}}
+    for(let k=Math.floor((x0+win)/OT)+1;k<=Math.floor((x0+win)/OT)+2;k++)tile(k);if(x0>=OT)tile(Math.floor(x0/OT)-1)}
   // franja nominal y eje
   c.strokeStyle=css('--line');c.setLineDash([4,4]);c.lineWidth=1;
   [ANCHO/2,-ANCHO/2].forEach(d=>{c.beginPath();c.moveTo(0,sy(d));c.lineTo(W,sy(d));c.stroke()});
@@ -408,7 +414,7 @@ function drawDet(){
   visible=[];const a=lowerBound(x0-12),b=lowerBound(x0+win+12);const cnt=new Map();
   for(let i=a;i<b;i++){const e=DATA.e[i];if(DATA.s[i]>=x0&&DATA.s[i]<=x0+win)cnt.set(e,(cnt.get(e)||0)+1);if(!on[e])continue;
     const w=Math.max(2,DATA.w[i]*k),h=Math.max(2,DATA.h[i]*pxm),x=sx(DATA.s[i])-w/2,y=sy(DATA.d[i])-h/2;
-    c.fillStyle=col(e);c.globalAlpha=.28;c.fillRect(x,y,w,h);c.globalAlpha=1;c.strokeStyle=col(e);c.lineWidth=1.2;c.strokeRect(x+.5,y+.5,w-1,h-1);
+    c.fillStyle=col(e);c.globalAlpha=ortoOn?0:.28;c.fillRect(x,y,w,h);c.globalAlpha=1;c.strokeStyle=col(e);c.lineWidth=ortoOn?1.6:1.2;c.strokeRect(x+.5,y+.5,w-1,h-1);
     visible.push([i,x,y,w,h])}
   // escala
   c.fillStyle=css('--muted');c.font='11px '+css('--f-data');c.textAlign='center';c.strokeStyle=css('--line');
@@ -429,6 +435,7 @@ function renderList(cnt){
 }
 document.getElementById('all').onclick=()=>{on.fill(true);document.querySelectorAll('#splist input').forEach(c=>c.checked=true);drawDet()};
 document.getElementById('none').onclick=()=>{on.fill(false);document.querySelectorAll('#splist input').forEach(c=>c.checked=false);drawDet()};
+document.getElementById('orto').onclick=e=>{ortoOn=!ortoOn;e.currentTarget.setAttribute('aria-pressed',ortoOn);drawDet()};
 const move=dx=>{x0=Math.max(0,Math.min(L-win,x0+dx));drawAll()};
 document.getElementById('prev').onclick=()=>move(-win*.8);
 document.getElementById('next').onclick=()=>move(win*.8);
